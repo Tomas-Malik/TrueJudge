@@ -5,8 +5,8 @@ from datasets import load_dataset
 
 # ── Extractors ────────────────────────────────────────────────────────────────
 
-gsm8k_fp = "/home/tmalik6/Summer/judge/Summer_Code/GSM8K_l8_binary_eval_target.csv"
-math500_fp = "/home/tmalik6/Summer/judge/Summer_Code/MATH500_l8_binary_eval_target.csv"
+gsm8k_fp = "/home/tmalik6/Summer/dedup/Summer_Code/GSM8K_l8_binary_eval_target.csv"
+math500_fp = "/home/tmalik6/Summer/dedup/Summer_Code/MATH500_l8_binary_eval_target.csv"
 
 def extract_gsm8k_ans(true_ans) -> float:
     true_ans = str(true_ans).replace(",", "")

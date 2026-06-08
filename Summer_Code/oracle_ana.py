@@ -227,7 +227,7 @@ def analyse_2way(
 # ── GSM8K ─────────────────────────────────────────────────────────────────────
 
 def analyse_gsm8k():
-    df = pd.read_csv("/home/tmalik6/Summer/judge/Summer_Code/GSM8K_l8_judge_2way_blind_fullsoln.csv")
+    df = pd.read_csv("/home/tmalik6/Summer/dedup/Summer_Code/GSM8K_l8_judge_2way_blind_fullsoln_reshuffle.csv")
 
     questions   = df["Question"].to_list()
     g9_raws     = df["G9"].to_list()
@@ -263,7 +263,7 @@ def analyse_gsm8k():
 # ── MATH500 ───────────────────────────────────────────────────────────────────
 
 def analyse_math500():
-    df = pd.read_csv("/home/tmalik6/Summer/judge/Summer_Code/MATH500_l8_judge_2way_blind_fullsoln.csv")
+    df = pd.read_csv("/home/tmalik6/Summer/dedup/Summer_Code/MATH500_l8_judge_2way_blind_fullsoln_reshuffle.csv")
 
     questions   = df["Question"].to_list()
     g9_raws     = df["G9"].to_list()
