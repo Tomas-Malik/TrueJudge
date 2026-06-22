@@ -1,0 +1,9 @@
+dataset,experiment,n,actual_correct,accuracy,parse_fail,actual_correct_pct,accuracy_pct
+GSM8K,Llama-3.1-8B (self),1319,1097,0.8248673237300985,14,83.2,82.5
+MATH500,Llama-3.1-8B (self),500,236,0.608,41,47.2,60.8
+GSM8K,Gemma-2-9B,1319,1142,0.8453373768006065,14,86.6,84.5
+MATH500,Gemma-2-9B,500,237,0.598,22,47.4,59.8
+GSM8K,Llama-3.3-70B,1319,1260,0.9150871872630781,10,95.5,91.5
+MATH500,Llama-3.3-70B,500,370,0.766,12,74.0,76.6
+GSM8K,True Solution (oracle),1319,1319,0.866565579984837,26,100.0,86.7
+MATH500,True Solution (oracle),500,500,0.756,24,100.0,75.6

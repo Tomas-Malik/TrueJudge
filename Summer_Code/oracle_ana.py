@@ -71,6 +71,11 @@ def parse_judge_output(judge_text: str) -> str:
     return "fail"
 
 # ── Core analysis ─────────────────────────────────────────────────────────────
+# ── Global config ─────────────────────────────────────────────────────────────
+
+TRUE_SOL_POSITION = "solution_2"  # set to "solution_1" for swapped-position CSVs
+
+# ── Core analysis ─────────────────────────────────────────────────────────────
 
 def analyse_2way(
     dataset_name: str,
@@ -78,95 +83,85 @@ def analyse_2way(
     g9_raws: list,
     target_raws: list,
     judge_raws: list,
-    g9_extractor,       # fn(raw) -> extracted answer
-    target_extractor,   # fn(raw) -> extracted answer
-    comparator,         # fn(pred, target) -> bool
+    g9_extractor,
+    target_extractor,
+    comparator,
 ):
     l = len(questions)
 
-    # Ground truth breakdown
-    gt_g9_only    = 0
-    gt_both_wrong = 0
-    gt_both_right = 0
-    # (target is always correct by construction, so "target only" = g9 wrong)
+    true_sol  = TRUE_SOL_POSITION                                        # e.g. "solution_2"
+    gemma_sol = "solution_1" if true_sol == "solution_2" else "solution_2"
 
-    # Judge decision counts
-    picked_solution_1  = 0   # judge picked Gemma
-    picked_solution_2  = 0   # judge picked target
+    gt_both_right = 0
+    gt_g9_only    = 0
+
+    picked_solution_1  = 0
+    picked_solution_2  = 0
     picked_none        = 0
     picked_both        = 0
     parse_fail         = 0
 
-    # Correctness when judge picks each option
-    correct_when_picked_1    = 0
-    correct_when_picked_none = 0
-    correct_when_picked_both = 0
+    correct_when_picked_gemma    = 0   # gemma was actually right when judge picked gemma
+    correct_when_picked_true_sol = 0   # gemma was actually WRONG when judge picked true sol
+    correct_when_picked_none     = 0   # gemma actually wrong when judge said none correct
+    correct_when_picked_both     = 0   # gemma actually right when judge said both correct
 
-    # Judge identification accuracy per scenario
-    # scenario A: g9 correct, target correct (both_right)  → ideal: both_correct
-    # scenario B: g9 wrong,   target correct (g9_only_wrong) → ideal: solution_2
-    # scenario C: both wrong                               → ideal: none_correct
-    scenario_both_right_total  = 0; scenario_both_right_correct  = 0
-    scenario_g9_wrong_total    = 0; scenario_g9_wrong_correct    = 0
-    scenario_both_wrong_total  = 0; scenario_both_wrong_correct  = 0
+    scenario_both_right_total = 0; scenario_both_right_correct = 0
+    scenario_g9_wrong_total   = 0; scenario_g9_wrong_correct   = 0
 
-    method_correct = 0  # overall: did following the judge's pick give the right answer?
+    method_correct = 0
 
     for q, g9_raw, target_raw, judge_raw in zip(questions, g9_raws, target_raws, judge_raws):
         g9_ans     = g9_extractor(g9_raw)
         target_ans = target_extractor(target_raw)
-
-        g9_ans = "NA_g9" if g9_ans == "NA" else g9_ans
-
-        g9_correct     = comparator(g9_ans, target_ans)
-        # target is always "correct" by definition — it IS the reference
-        # so we track whether g9 matches it
+        g9_ans     = "NA_g9" if g9_ans == "NA" else g9_ans
+        g9_correct = comparator(g9_ans, target_ans)
 
         if g9_correct:
             gt_both_right += 1
         else:
-            gt_g9_only = gt_g9_only  # g9 wrong, target right — always
-            gt_both_wrong += 0       # can't both be wrong since target = reference
-
-        # Since target IS the ground truth, the only two ground truth states are:
-        # g9 correct (both right) or g9 wrong (only target right)
-        if not g9_correct:
             gt_g9_only += 1
 
         decision = parse_judge_output(judge_raw)
 
-        # Per-scenario identification accuracy
         if g9_correct:
             scenario_both_right_total += 1
             if decision == "both_correct":
                 scenario_both_right_correct += 1
         else:
             scenario_g9_wrong_total += 1
-            if decision == "solution_2":
+            if decision == true_sol:
                 scenario_g9_wrong_correct += 1
 
-        # Decision distribution and method accuracy
         if decision == "fail":
             parse_fail += 1
-            # fallback: assume g9 (solution_1); correct if g9 is correct
             if g9_correct:
                 method_correct += 1
 
         elif decision == "solution_1":
             picked_solution_1 += 1
-            if g9_correct:
-                correct_when_picked_1 += 1
+            if decision == gemma_sol:
+                if g9_correct:
+                    correct_when_picked_gemma += 1
+                    method_correct += 1
+            else:  # decision == true_sol
+                if not g9_correct:
+                    correct_when_picked_true_sol += 1
                 method_correct += 1
 
         elif decision == "solution_2":
             picked_solution_2 += 1
-            # solution_2 is always the target = always correct
-            method_correct += 1
+            if decision == gemma_sol:
+                if g9_correct:
+                    correct_when_picked_gemma += 1
+                    method_correct += 1
+            else:  # decision == true_sol
+                if not g9_correct:
+                    correct_when_picked_true_sol += 1
+                method_correct += 1
 
         elif decision == "none_correct":
             picked_none += 1
-            # correct call only if g9 is actually wrong (which means target is right,
-            # so "none_correct" is still wrong — but we track it separately)
             if not g9_correct:
                 correct_when_picked_none += 1
 
@@ -176,9 +171,12 @@ def analyse_2way(
                 correct_when_picked_both += 1
                 method_correct += 1
 
-    # ── Print ─────────────────────────────────────────────────────────────────
+    picked_gemma    = picked_solution_1 if gemma_sol == "solution_1" else picked_solution_2
+    picked_true_sol = picked_solution_1 if true_sol  == "solution_1" else picked_solution_2
+
     print(f"\n{'═' * 60}")
     print(f"  {dataset_name}  —  2-way blind judge (Llama-3.1-8B local)")
+    print(f"  [True solution presented as: {true_sol}]")
     print(f"{'═' * 60}")
     print(f"  Total questions              : {l}")
 
@@ -187,19 +185,23 @@ def analyse_2way(
     print(f"  Gemma wrong (target right)   : {gt_g9_only}  ({gt_g9_only/l*100:.1f}%)")
 
     print(f"\n  ── Judge decision distribution ────────────────────────")
-    print(f"  Picked solution_1 (Gemma)    : {picked_solution_1}  ({picked_solution_1/l*100:.1f}%)")
-    print(f"  Picked solution_2 (target)   : {picked_solution_2}  ({picked_solution_2/l*100:.1f}%)")
+    print(f"  Picked solution_1 (Gemma)    : {picked_solution_1}  ({picked_solution_1/l*100:.1f}%)" if gemma_sol == "solution_1" else
+          f"  Picked solution_1 (true sol) : {picked_solution_1}  ({picked_solution_1/l*100:.1f}%)")
+    print(f"  Picked solution_2 (target)   : {picked_solution_2}  ({picked_solution_2/l*100:.1f}%)" if true_sol == "solution_2" else
+          f"  Picked solution_2 (Gemma)    : {picked_solution_2}  ({picked_solution_2/l*100:.1f}%)")
     print(f"  Picked none_correct          : {picked_none}  ({picked_none/l*100:.1f}%)")
     print(f"  Picked both_correct          : {picked_both}  ({picked_both/l*100:.1f}%)")
     print(f"  Parse fail                   : {parse_fail}  ({parse_fail/l*100:.1f}%)")
 
     print(f"\n  ── Precision of each pick ─────────────────────────────")
-    if picked_solution_1 > 0:
-        print(f"  solution_1 precision         : {correct_when_picked_1}/{picked_solution_1}"
-              f"  ({correct_when_picked_1/picked_solution_1*100:.1f}%)"
+    if picked_gemma > 0:
+        print(f"  {gemma_sol} precision (Gemma)  : {correct_when_picked_gemma}/{picked_gemma}"
+              f"  ({correct_when_picked_gemma/picked_gemma*100:.1f}%)"
               f"  ← Gemma was actually right")
-    print(f"  solution_2 precision         : {picked_solution_2}/{picked_solution_2}"
-          f"  (100.0%)  ← target always correct by construction")
+    if picked_true_sol > 0:
+        print(f"  {true_sol} precision (true) : {correct_when_picked_true_sol}/{picked_true_sol}"
+              f"  ({correct_when_picked_true_sol/picked_true_sol*100:.1f}%)"
+              f"  ← Gemma was actually wrong")
     if picked_none > 0:
         print(f"  none_correct precision       : {correct_when_picked_none}/{picked_none}"
               f"  ({correct_when_picked_none/picked_none*100:.1f}%)"
@@ -215,7 +217,7 @@ def analyse_2way(
               f"{scenario_both_right_correct}/{scenario_both_right_total}"
               f"  ({scenario_both_right_correct/scenario_both_right_total*100:.1f}%)")
     if scenario_g9_wrong_total > 0:
-        print(f"  When Gemma wrong   → picked solution_2    : "
+        print(f"  When Gemma wrong   → picked {true_sol}    : "
               f"{scenario_g9_wrong_correct}/{scenario_g9_wrong_total}"
               f"  ({scenario_g9_wrong_correct/scenario_g9_wrong_total*100:.1f}%)")
 
@@ -223,11 +225,10 @@ def analyse_2way(
     print(f"  Method correct               : {method_correct}/{l}  ({method_correct/l*100:.1f}%)")
     print(f"  Gemma baseline               : {gt_both_right}/{l}  ({gt_both_right/l*100:.1f}%)")
     print(f"  Oracle upper bound           : {l}/{l}  (100.0%)  ← target always right")
-
 # ── GSM8K ─────────────────────────────────────────────────────────────────────
 
 def analyse_gsm8k():
-    df = pd.read_csv("/home/tmalik6/Summer/dedup/Summer_Code/GSM8K_l8_judge_2way_blind_fullsoln_reshuffle.csv")
+    df = pd.read_csv("/home/tmalik6/Summer/dedup/Summer_Code/GSM8K_l8_judge_2way_blind_fullsoln.csv")
 
     questions   = df["Question"].to_list()
     g9_raws     = df["G9"].to_list()
@@ -263,7 +264,7 @@ def analyse_gsm8k():
 # ── MATH500 ───────────────────────────────────────────────────────────────────
 
 def analyse_math500():
-    df = pd.read_csv("/home/tmalik6/Summer/dedup/Summer_Code/MATH500_l8_judge_2way_blind_fullsoln_reshuffle.csv")
+    df = pd.read_csv("/home/tmalik6/Summer/dedup/Summer_Code/MATH500_l8_judge_2way_blind_fullsoln.csv")
 
     questions   = df["Question"].to_list()
     g9_raws     = df["G9"].to_list()
