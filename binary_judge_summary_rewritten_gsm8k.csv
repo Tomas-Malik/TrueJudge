@@ -1,0 +1,4 @@
+dataset,judge,generator,n,actual_correct,verdict_correct,verdict_incorrect,parse_fail,tp,fn,fp,tn,accuracy,actual_correct_pct,accuracy_pct
+GSM8K,Llama-3.1-8B,Llama-3.3-70B (Rewritten),1319,1285,1146,149,24,1130,133,16,16,0.8688400303260045,97.4,86.9
+GSM8K,Gemma-2-9B,Llama-3.3-70B (Rewritten),1319,1285,1191,124,4,1178,103,13,21,0.909021986353298,97.4,90.9
+GSM8K,Qwen3-8B,Llama-3.3-70B (Rewritten),1319,1285,1255,34,30,1241,22,14,12,0.9499620924943138,97.4,95.0

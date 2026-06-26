@@ -1,0 +1,9 @@
+dataset,judge,generator,n,actual_correct,verdict_correct,verdict_incorrect,parse_fail,tp,fn,fp,tn,accuracy,actual_correct_pct,accuracy_pct
+GSM8K,Llama 3.3 70B,Llama-3.1-8B,1319,1097,1149,168,2,1076,21,73,147,0.9272175890826384,83.2,92.7
+MATH500,Llama 3.3 70B,Llama-3.1-8B,500,236,322,172,6,233,3,89,169,0.804,47.2,80.4
+GSM8K,Llama 3.3 70B,Gemma-2-9B,1319,1142,1190,129,0,1122,20,68,109,0.9332827899924185,86.6,93.3
+MATH500,Llama 3.3 70B,Gemma-2-9B,500,237,328,169,3,232,5,96,164,0.792,47.4,79.2
+GSM8K,Llama 3.3 70B,Llama-3.3-70B (self),1319,1260,1306,11,2,1253,7,53,4,0.9529946929492039,95.5,95.3
+MATH500,Llama 3.3 70B,Llama-3.3-70B (self),500,370,448,48,4,364,6,84,42,0.812,74.0,81.2
+GSM8K,Llama 3.3 70B,True Solution (oracle),1319,1319,1283,36,0,1283,36,0,0,0.9727065959059894,100.0,97.3
+MATH500,Llama 3.3 70B,True Solution (oracle),500,500,492,8,0,492,8,0,0,0.984,100.0,98.4
